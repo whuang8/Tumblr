@@ -46,6 +46,10 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
         return cell
     }
     
+    public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        self.tableView.deselectRow(at: indexPath, animated: true)
+    }
+    
     func getPosts() -> Void {
         let url = URL(string:"https://api.tumblr.com/v2/blog/humansofnewyork.tumblr.com/posts/photo?api_key=Q6vHoaVm5L1u2ZAW1fqv3Jw48gFzYVg9P0vH0VHl3GVy6quoGV")
         let request = URLRequest(url: url!)
@@ -77,14 +81,13 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
 
-    /*
+    
     // MARK: - Navigation
 
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
+        let vc = segue.destination as! PhotoDetailsViewController
+        let cell = sender as! PhotoCell
+        vc.image = cell.photo.image
     }
-    */
-
 }
