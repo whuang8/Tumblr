@@ -19,7 +19,6 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
         
         tableView.delegate = self
         tableView.dataSource = self
-        tableView.rowHeight = 240
         getPosts()
     }
 
@@ -40,6 +39,10 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
             if let imageUrl = NSURL(string: imageUrlString!) {
                 cell.photo.setImageWith(imageUrl as URL)
             }
+            let rawSummary = post["summary"] as! String
+            let summary = rawSummary.substring(from: rawSummary.index(rawSummary.startIndex, offsetBy: 1))
+            cell.summaryLabel.text = summary
+            cell.summaryLabel.sizeToFit()
         } else {
             print("No photos available")
         }
@@ -65,7 +68,7 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
                 if let data = data {
                     if let responseDictionary = try! JSONSerialization.jsonObject(
                         with: data, options:[]) as? NSDictionary {
-                        print("responseDictionary: \(responseDictionary)")
+                        //print("responseDictionary: \(responseDictionary)")
                         
                         // Recall there are two fields in the response dictionary, 'meta' and 'response'.
                         // This is how we get the 'response' field
