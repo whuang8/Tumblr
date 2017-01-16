@@ -12,14 +12,20 @@ import AFNetworking
 class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
     @IBOutlet weak var tableView: UITableView!
-    var posts: [NSDictionary] = []
+    private var posts: [NSDictionary] = []
+    private let refreshControl = UIRefreshControl()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         tableView.delegate = self
         tableView.dataSource = self
-        getPosts()
+        
+        // Bind action to refresh control
+        self.refreshControl.addTarget(self, action: #selector(refreshControlAction(refreshControl:)), for: UIControlEvents.valueChanged)
+        // Insert reffresh control into tabe view
+        self.tableView.insertSubview(self.refreshControl, at: 0)
+        getPosts(refreshing: false)
     }
 
     override func didReceiveMemoryWarning() {
@@ -53,7 +59,11 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
         self.tableView.deselectRow(at: indexPath, animated: true)
     }
     
-    func getPosts() -> Void {
+    func refreshControlAction(refreshControl: UIRefreshControl) {
+        getPosts(refreshing: true)
+    }
+    
+    func getPosts(refreshing: Bool) -> Void {
         let url = URL(string:"https://api.tumblr.com/v2/blog/humansofnewyork.tumblr.com/posts/photo?api_key=Q6vHoaVm5L1u2ZAW1fqv3Jw48gFzYVg9P0vH0VHl3GVy6quoGV")
         let request = URLRequest(url: url!)
         let session = URLSession(
@@ -77,6 +87,9 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
                         // Store the posts array
                         self.posts = responseFieldDictionary["posts"] as! [NSDictionary]
                         self.tableView.reloadData()
+                        if refreshing {
+                            self.refreshControl.endRefreshing()
+                        }
                     }
                 }
         });
