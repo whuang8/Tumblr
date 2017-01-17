@@ -9,11 +9,20 @@
 import UIKit
 import AFNetworking
 
-class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UIScrollViewDelegate {
 
     @IBOutlet weak var tableView: UITableView!
     private var posts: [NSDictionary] = []
     private let refreshControl = UIRefreshControl()
+    private var isMoreDataLoading = false
+    var loadingMoreView: InfiniteScrollActivityView?
+    var postsOffset = 20 // Used for getting more posts from Tumblr.
+    
+    enum DataFetch {
+        case viewLoad
+        case refreshControl
+        case infiniteScroll
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -25,7 +34,18 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
         self.refreshControl.addTarget(self, action: #selector(refreshControlAction(refreshControl:)), for: UIControlEvents.valueChanged)
         // Insert reffresh control into tabe view
         self.tableView.insertSubview(self.refreshControl, at: 0)
-        getPosts(refreshing: false)
+        
+        // Set up Infinite Scroll loading indicator
+        let frame = CGRect(x: 0, y: tableView.contentSize.height, width: tableView.bounds.size.width, height: InfiniteScrollActivityView.defaultHeight)
+        loadingMoreView = InfiniteScrollActivityView(frame: frame)
+        loadingMoreView!.isHidden = true
+        tableView.addSubview(loadingMoreView!)
+        
+        var insets = tableView.contentInset;
+        insets.bottom += InfiniteScrollActivityView.defaultHeight;
+        tableView.contentInset = insets
+        
+        getPosts(sender: DataFetch.viewLoad)
     }
 
     override func didReceiveMemoryWarning() {
@@ -60,11 +80,36 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     func refreshControlAction(refreshControl: UIRefreshControl) {
-        getPosts(refreshing: true)
+        getPosts(sender: DataFetch.refreshControl)
     }
     
-    func getPosts(refreshing: Bool) -> Void {
-        let url = URL(string:"https://api.tumblr.com/v2/blog/humansofnewyork.tumblr.com/posts/photo?api_key=Q6vHoaVm5L1u2ZAW1fqv3Jw48gFzYVg9P0vH0VHl3GVy6quoGV")
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if !isMoreDataLoading {
+            let scrollViewContentHeight = self.tableView.contentSize.height
+            let scrollOffsetThreshold = scrollViewContentHeight - self.tableView.bounds.size.height
+            
+            if scrollView.contentOffset.y > scrollOffsetThreshold && self.tableView.isDragging {
+                isMoreDataLoading = true
+                
+                // Update position of loadingMoreView, and start loading indicator
+                let frame = CGRect(x: 0, y: tableView.contentSize.height, width: tableView.bounds.size.width, height: InfiniteScrollActivityView.defaultHeight)
+                loadingMoreView?.frame = frame
+                loadingMoreView!.startAnimating()
+                
+                self.getPosts(sender: DataFetch.infiniteScroll)
+            }
+            
+        }
+    }
+    
+    func getPosts(sender: DataFetch) -> Void {
+        var url: URL?
+        if sender == DataFetch.infiniteScroll {
+            url = URL(string:"https://api.tumblr.com/v2/blog/humansofnewyork.tumblr.com/posts/photo?offset=\(self.postsOffset)&api_key=Q6vHoaVm5L1u2ZAW1fqv3Jw48gFzYVg9P0vH0VHl3GVy6quoGV")
+            self.postsOffset += 20
+        } else {
+            url = URL(string:"https://api.tumblr.com/v2/blog/humansofnewyork.tumblr.com/posts/photo?api_key=Q6vHoaVm5L1u2ZAW1fqv3Jw48gFzYVg9P0vH0VHl3GVy6quoGV")
+        }
         let request = URLRequest(url: url!)
         let session = URLSession(
             configuration: URLSessionConfiguration.default,
@@ -79,16 +124,19 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
                     if let responseDictionary = try! JSONSerialization.jsonObject(
                         with: data, options:[]) as? NSDictionary {
                         //print("responseDictionary: \(responseDictionary)")
+
                         
-                        // Recall there are two fields in the response dictionary, 'meta' and 'response'.
-                        // This is how we get the 'response' field
                         let responseFieldDictionary = responseDictionary["response"] as! NSDictionary
                         
                         // Store the posts array
-                        self.posts = responseFieldDictionary["posts"] as! [NSDictionary]
+                        self.posts += responseFieldDictionary["posts"] as! [NSDictionary]
                         self.tableView.reloadData()
-                        if refreshing {
+                        if sender == DataFetch.refreshControl {
                             self.refreshControl.endRefreshing()
+                        }
+                        else if sender == DataFetch.infiniteScroll {
+                            self.loadingMoreView?.stopAnimating()
+                            self.isMoreDataLoading = false
                         }
                     }
                 }
