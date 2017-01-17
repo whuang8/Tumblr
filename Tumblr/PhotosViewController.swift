@@ -16,9 +16,9 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
     private let refreshControl = UIRefreshControl()
     private var isMoreDataLoading = false
     var loadingMoreView: InfiniteScrollActivityView?
-    var postsOffset = 20 // Used for getting more posts from Tumblr.
+    var postsOffset = 20 // Used for getting more posts from Tumblr. Starts at 20 for the initial 20 posts received.
     
-    enum DataFetch {
+    enum DataFetchSender {
         case viewLoad
         case refreshControl
         case infiniteScroll
@@ -45,7 +45,7 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
         insets.bottom += InfiniteScrollActivityView.defaultHeight;
         tableView.contentInset = insets
         
-        getPosts(sender: DataFetch.viewLoad)
+        getPosts(sender: DataFetchSender.viewLoad)
     }
 
     override func didReceiveMemoryWarning() {
@@ -80,7 +80,7 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     func refreshControlAction(refreshControl: UIRefreshControl) {
-        getPosts(sender: DataFetch.refreshControl)
+        getPosts(sender: DataFetchSender.refreshControl)
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -96,15 +96,14 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
                 loadingMoreView?.frame = frame
                 loadingMoreView!.startAnimating()
                 
-                self.getPosts(sender: DataFetch.infiniteScroll)
+                self.getPosts(sender: DataFetchSender.infiniteScroll)
             }
-            
         }
     }
     
-    func getPosts(sender: DataFetch) -> Void {
+    func getPosts(sender: DataFetchSender) -> Void {
         var url: URL?
-        if sender == DataFetch.infiniteScroll {
+        if sender == DataFetchSender.infiniteScroll {
             url = URL(string:"https://api.tumblr.com/v2/blog/humansofnewyork.tumblr.com/posts/photo?offset=\(self.postsOffset)&api_key=Q6vHoaVm5L1u2ZAW1fqv3Jw48gFzYVg9P0vH0VHl3GVy6quoGV")
             self.postsOffset += 20
         } else {
@@ -125,16 +124,15 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
                         with: data, options:[]) as? NSDictionary {
                         //print("responseDictionary: \(responseDictionary)")
 
-                        
                         let responseFieldDictionary = responseDictionary["response"] as! NSDictionary
                         
                         // Store the posts array
                         self.posts += responseFieldDictionary["posts"] as! [NSDictionary]
                         self.tableView.reloadData()
-                        if sender == DataFetch.refreshControl {
+                        if sender == DataFetchSender.refreshControl {
                             self.refreshControl.endRefreshing()
                         }
-                        else if sender == DataFetch.infiniteScroll {
+                        else if sender == DataFetchSender.infiniteScroll {
                             self.loadingMoreView?.stopAnimating()
                             self.isMoreDataLoading = false
                         }
