@@ -125,9 +125,15 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
                         //print("responseDictionary: \(responseDictionary)")
 
                         let responseFieldDictionary = responseDictionary["response"] as! NSDictionary
-                        
-                        // Store the posts array
-                        self.posts += responseFieldDictionary["posts"] as! [NSDictionary]
+
+                        if sender == DataFetchSender.infiniteScroll {
+                            // Store the posts array
+                            self.posts += responseFieldDictionary["posts"] as! [NSDictionary]
+                        } else {
+                            self.posts = responseFieldDictionary["posts"] as! [NSDictionary]
+                            self.postsOffset = 20
+                        }
+
                         self.tableView.reloadData()
                         if sender == DataFetchSender.refreshControl {
                             self.refreshControl.endRefreshing()
